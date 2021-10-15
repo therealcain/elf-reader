@@ -26,46 +26,15 @@
 #define READELF_HPP
 #pragma once
 
-#include <climits>
 #include <string>
-#include <type_traits>
 #include <array>
+#include <memory>
 
 namespace ELF
 {
-    namespace details
-    {
-        static constexpr size_t SysBits = (CHAR_BIT * sizeof(void*));
-
-        template<typename T32, typename T64>
-        using BitsBasedType = 
-            typename std::conditional<SysBits == 32, T32, T64>::type;
-
-        // ------------------------------------------------------------------------------------------------
-
-        struct FileHeader
-        {
-            uint8_t magic[4];
-            uint8_t bits; // class
-            uint8_t endian;
-            uint8_t version1;
-            uint8_t osabi;
-            uint8_t abiver;
-            uint8_t unused[7];
-            uint16_t type;
-            uint16_t machine;
-            uint32_t version2;
-            BitsBasedType<uint32_t, uint64_t> entry;
-            BitsBasedType<uint32_t, uint64_t> phoff;
-            BitsBasedType<uint32_t, uint64_t> shoff;
-            uint16_t ehsize;
-            uint16_t phentsize;
-            uint16_t phnum;
-            uint16_t shentsize;
-            uint16_t shnum;
-            uint16_t shstrndx;
-        };
-    };
+    namespace details {
+        struct FileHeader;
+    }
 
     // ------------------------------------------------------------------------------------------------
 
@@ -182,6 +151,7 @@ namespace ELF
     {
     public:
         Reader(const std::string& filename);
+        ~Reader();
 
         // File Header
         std::array<uint8_t, 4> get_file_header_magic_number() const;
@@ -192,9 +162,11 @@ namespace ELF
         InstructionSetArchitectureType get_file_header_isa_type() const;
         uint64_t get_file_header_entry_point() const;
         uint64_t get_file_header_start_of_program_header_table() const;
+        uint64_t get_file_header_start_of_section_header_table() const;
+        uint32_t get_file_header_flags() const;
 
     private:
-        details::FileHeader file_header;
+        std::unique_ptr<details::FileHeader> file_header;
     };
 }
 
