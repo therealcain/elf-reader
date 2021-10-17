@@ -6,12 +6,10 @@
 #include <fstream>
 #include <vector>
 #include <stdexcept>
-#include <exception>
 #include <iterator>
 #include <iostream>
 #include <type_traits>
 #include <climits>
-#include <iomanip>
 // #include <elf.h>
 
 // ------------------------------------------------------------------------------------------------
@@ -21,6 +19,8 @@ static constexpr size_t SysBits = (CHAR_BIT * sizeof(void*));
 template<typename T32, typename T64>
 using BitsBasedType = 
     typename std::conditional<SysBits == 32, T32, T64>::type;
+
+using ZeroAllocType = char[0]; // or any other type. sizeof(ZeroAllocType) = 0.
 
 // ------------------------------------------------------------------------------------------------
 
@@ -50,6 +50,33 @@ namespace ELF
             uint16_t shnum;
             uint16_t shstrndx;
         };
+
+        struct ProgramHeader
+        {
+            uint32_t type;
+            BitsBasedType<ZeroAllocType, uint32_t> flags64; // flags for 64bit
+            BitsBasedType<uint32_t, uint64_t> offset;
+            BitsBasedType<uint32_t, uint64_t> vaddr;
+            BitsBasedType<uint32_t, uint64_t> paddr;
+            BitsBasedType<uint32_t, uint64_t> filesz;
+            BitsBasedType<uint32_t, uint64_t> memsz;
+            BitsBasedType<uint32_t, ZeroAllocType> flags32; // flags for 32bit
+            BitsBasedType<uint32_t, uint64_t> align;
+        };
+
+        struct SectionHeader
+        {
+            uint32_t name;
+            uint32_t type;
+            BitsBasedType<uint32_t, uint64_t> flags;
+            BitsBasedType<uint32_t, uint64_t> addr;
+            BitsBasedType<uint32_t, uint64_t> offset;
+            BitsBasedType<uint32_t, uint64_t> size;
+            uint32_t link;
+            uint32_t info;
+            BitsBasedType<uint32_t, uint64_t> addralign;
+            BitsBasedType<uint32_t, uint64_t> entsize;
+        };
     }
 
     // ------------------------------------------------------------------------------------------------
@@ -66,17 +93,33 @@ namespace ELF
 
     // ------------------------------------------------------------------------------------------------
 
-    static
-    void
-    read_file_header(std::unique_ptr<details::FileHeader>& header, const std::vector<uint8_t>& buffer)
+    void 
+    Reader::read_file_header(const std::vector<uint8_t>& buffer)
     {
         if(buffer.size() < sizeof(details::FileHeader))
             throw std::runtime_error("File header does not have an expected size.");
 
-        std::memcpy(header.get(), buffer.data(), sizeof(details::FileHeader));
+        std::memcpy(file_header.get(), buffer.data(), sizeof(details::FileHeader));
 
-        if(!validate_elf_magic(header->magic))
+        if(!validate_elf_magic(file_header->magic))
             throw std::runtime_error("File is not an ELF file.");
+    }
+
+    void
+    Reader::read_program_headers(const std::vector<uint8_t>& buffer)
+    {
+        auto phnum = file_header->phnum;
+        const uint8_t* p_header = buffer.data() + file_header->ehsize;
+
+        for (size_t i = 0; i < phnum; i++)
+        {
+            PtrProgramHeader ph = std::make_unique<details::ProgramHeader>();
+            std::memcpy(ph.get(), p_header, sizeof(details::ProgramHeader));
+
+            program_headers.push_back(std::move(ph));
+
+            p_header += sizeof(details::ProgramHeader);
+        }
     }
 
     Reader::Reader(const std::string& filename)
@@ -89,7 +132,8 @@ namespace ELF
             std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(ifs),
                                         std::istreambuf_iterator<char>{});
 
-            read_file_header(file_header, buffer);
+            read_file_header(buffer);
+            read_program_headers(buffer);
         }
         else
             throw std::runtime_error("File couldn't be opened.");
@@ -97,132 +141,45 @@ namespace ELF
 
     Reader::~Reader() = default;
 
-
-
-
-
-
-
-
-
-
     // ------------------------------------------------------------------------------------------------
 
-    std::array<uint8_t, 4> 
-    Reader::get_file_header_magic_number() 
+    const FileHeaderInfo 
+    Reader::get_file_header() 
         const
     {
-        // return std::to_array(file_header.magic);
-        return {
-            file_header->magic[0], 
-            file_header->magic[1], 
-            file_header->magic[2], 
-            file_header->magic[3]
-        };
-    }
+        FileHeaderInfo info;
+        
+        info.magic[0] = file_header->magic[0];
+        info.magic[1] = file_header->magic[1];
+        info.magic[2] = file_header->magic[2];
+        info.magic[3] = file_header->magic[3];
 
-    uint8_t 
-    Reader::get_file_header_32_or_64_bit() 
-        const 
-    {
-        return file_header->bits == 1 ? 32 : 64;
-    }
+        info.bits = file_header->bits == 1 ? 32 : 64;
 
-    Endianness 
-    Reader::get_file_header_endianness() 
-        const 
-    {
-        return file_header->endian == 1 ? Endianness::Little : Endianness::Big;
-    }
+        info.endian = file_header->endian == 1 ? Endianness::Little : Endianness::Big;
 
-    ABIType 
-    Reader::get_file_header_abi() 
-        const 
-    {
-        return static_cast<ABIType>(file_header->osabi);
-    }
+        info.abi = static_cast<ABIType>(file_header->osabi);
 
-    ObjectFileType 
-    Reader::get_file_header_object_file_type() 
-        const 
-    {
-        return static_cast<ObjectFileType>(file_header->type);
-    }
+        info.object_file_type = static_cast<ObjectFileType>(file_header->type);
 
-    InstructionSetArchitectureType 
-    Reader::get_file_header_isa_type() 
-        const 
-    {
-        return static_cast<InstructionSetArchitectureType>(file_header->machine);
-    }
+        info.instruction_set_architecture_type = static_cast<InstructionSetArchitectureType>(file_header->machine);
 
-    uint64_t 
-    Reader::get_file_header_entry_point() 
-        const
-    {
-        return static_cast<uint64_t>(file_header->entry);
-    }
+        info.entry_point = static_cast<uint64_t>(file_header->entry);
 
-    uint64_t 
-    Reader::get_file_header_start_of_program_header_table() 
-        const
-    {
-        return static_cast<uint64_t>(file_header->phoff);
-    }
+        info.start_of_program_header_table = static_cast<uint64_t>(file_header->phoff);
+        info.start_of_section_header_table = static_cast<uint64_t>(file_header->shoff);
 
-    uint64_t 
-    Reader::get_file_header_start_of_section_header_table() 
-        const
-    {
-        return static_cast<uint64_t>(file_header->shoff);
-    }
+        info.flags = file_header->flags;
 
-    uint32_t 
-    Reader::get_file_header_flags() 
-        const
-    {
-        return file_header->flags;
-    }
+        info.size = file_header->ehsize;
+        info.program_header_size = file_header->phentsize;
+        info.section_header_size = file_header->shentsize;
 
-    uint16_t
-    Reader::get_file_header_size() 
-        const
-    {
-        return file_header->ehsize;
-    }
+        info.number_of_program_entries = file_header->phnum;
+        info.number_of_section_entries = file_header->shnum;
 
-    uint16_t
-    Reader::get_file_header_program_header_size() 
-        const
-    {
-        return file_header->phentsize;
-    }
+        info.index_of_section_header = file_header->shstrndx;
 
-    uint16_t 
-    Reader::get_file_header_number_of_program_entries() 
-        const
-    {
-        return file_header->phnum;
-    }
-
-    uint16_t 
-    Reader::get_file_header_section_header_size() 
-        const
-    {
-        return file_header->shentsize;
-    }
-
-    uint16_t 
-    Reader::get_file_header_number_of_section_entries() 
-        const
-    {
-        return file_header->shnum;
-    }
-
-    uint16_t 
-    Reader::get_file_header_index_of_section_header() 
-        const
-    {
-        return file_header->shstrndx;
+        return info;
     }
 }

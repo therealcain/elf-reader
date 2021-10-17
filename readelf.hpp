@@ -29,11 +29,14 @@
 #include <string>
 #include <array>
 #include <memory>
+#include <vector>
 
 namespace ELF
 {
     namespace details {
         struct FileHeader;
+        struct ProgramHeader;
+        struct SectionHeader;
     }
 
     // ------------------------------------------------------------------------------------------------
@@ -147,32 +150,44 @@ namespace ELF
 
     // ------------------------------------------------------------------------------------------------
 
+    struct FileHeaderInfo
+    {
+        std::array<uint8_t, 4> magic;
+        uint32_t bits;
+        Endianness endian;
+        ABIType abi;
+        ObjectFileType object_file_type;
+        InstructionSetArchitectureType instruction_set_architecture_type;
+        uint64_t entry_point;
+        uint64_t start_of_program_header_table;
+        uint64_t start_of_section_header_table;
+        uint32_t flags;
+        uint16_t size;
+        uint16_t program_header_size;
+        uint16_t number_of_program_entries;
+        uint16_t section_header_size;
+        uint16_t number_of_section_entries;
+        uint16_t index_of_section_header;
+    };
+
     class Reader
     {
     public:
         Reader(const std::string& filename);
         ~Reader();
 
-        // File Header
-        std::array<uint8_t, 4> get_file_header_magic_number() const;
-        uint8_t get_file_header_32_or_64_bit() const;
-        Endianness get_file_header_endianness() const;
-        ABIType get_file_header_abi() const;
-        ObjectFileType get_file_header_object_file_type() const;
-        InstructionSetArchitectureType get_file_header_isa_type() const;
-        uint64_t get_file_header_entry_point() const;
-        uint64_t get_file_header_start_of_program_header_table() const;
-        uint64_t get_file_header_start_of_section_header_table() const;
-        uint32_t get_file_header_flags() const;
-        uint16_t get_file_header_size() const;
-        uint16_t get_file_header_program_header_size() const;
-        uint16_t get_file_header_number_of_program_entries() const;
-        uint16_t get_file_header_section_header_size() const;
-        uint16_t get_file_header_number_of_section_entries() const;
-        uint16_t get_file_header_index_of_section_header() const;
+        const FileHeaderInfo get_file_header() const;
 
     private:
-        std::unique_ptr<details::FileHeader> file_header;
+        void read_file_header(const std::vector<uint8_t>& buffer);
+        void read_program_headers(const std::vector<uint8_t>& buffer);
+
+    private:
+        using PtrFileHeader = std::unique_ptr<details::FileHeader>;
+        PtrFileHeader file_header;
+
+        using PtrProgramHeader = std::unique_ptr<details::ProgramHeader>;
+        std::vector<PtrProgramHeader> program_headers;
     };
 }
 

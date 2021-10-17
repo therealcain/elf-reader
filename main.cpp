@@ -4,13 +4,14 @@
 int main()
 {
     ELF::Reader reader("test");
+    auto header = reader.get_file_header();
 
     std::cout << "ALL VALUES ARE IN HEX" << std::endl;
     
     std::cout << std::hex;
 
     // ELF magic header.
-    auto magic = reader.get_file_header_magic_number();
+    auto magic = header.magic;
     std::cout << "Magic: " << 
         static_cast<int>(magic[0]) << " " << 
         static_cast<int>(magic[1]) << " " << 
@@ -19,15 +20,15 @@ int main()
 
 
     // 32 or 64 bit format
-    int8_t format_bits = reader.get_file_header_32_or_64_bit();
+    int8_t format_bits = header.bits;
     std::cout << "Class: " << (format_bits == 32 ? "ELF32" : "ELF64") << std::endl;
 
     // Little or Big endian
-    auto endian = reader.get_file_header_endianness();
+    auto endian = header.endian;
     std::cout << "Endianness: " << (endian == ELF::Endianness::Little ? "Little" : "Big") << std::endl;
 
     // OS ABI
-    auto abi = reader.get_file_header_abi();
+    auto abi = header.abi;
     std::cout << "ABI: ";
 
     switch(abi) {
@@ -107,7 +108,7 @@ int main()
     std::cout << std::endl;
 
     // Object File Type
-    auto obj_type = reader.get_file_header_object_file_type();
+    auto obj_type = header.object_file_type;
     std::cout << "Object File Type: ";
 
     switch (obj_type)
@@ -151,7 +152,7 @@ int main()
     std::cout << std::endl;
 
     // ISA
-    auto isa = reader.get_file_header_isa_type();
+    auto isa = header.instruction_set_architecture_type;
     std::cout << "Instruction Set: ";
     switch(isa)
     {
@@ -349,42 +350,42 @@ int main()
     std::cout << std::endl;
 
     // Entry Point
-    uint64_t entry = reader.get_file_header_entry_point();
+    uint64_t entry = header.entry_point;
     std::cout << "Entry Point: " << entry << std::endl;
 
     // Start of program header
-    uint64_t phoff = reader.get_file_header_start_of_program_header_table();
+    uint64_t phoff = header.start_of_program_header_table;
     std::cout << "Start of Program Header: " << phoff << std::endl;
 
     // Start of section header
-    uint64_t shoff = reader.get_file_header_start_of_section_header_table();
+    uint64_t shoff = header.start_of_section_header_table;
     std::cout << "Start of Section Header: " << shoff << std::endl;
 
     // Flags
-    uint32_t flags = reader.get_file_header_flags();
+    uint32_t flags = header.flags;
     std::cout << "Flags: " << flags << std::endl;
 
     // Header Size
-    uint16_t ehsize = reader.get_file_header_size();
+    uint16_t ehsize = header.size;
     std::cout << "Header Size: " << ehsize << std::endl;
 
     // Program Header Size
-    uint16_t phentsize = reader.get_file_header_program_header_size();
+    uint16_t phentsize = header.program_header_size;
     std::cout << "Program Header Table Entry Size: " << phentsize << std::endl;
 
     // Number of program entries
-    uint16_t phnum = reader.get_file_header_number_of_program_entries();
+    uint16_t phnum = header.number_of_program_entries;
     std::cout << "Number of Program Entries: " << phnum << std::endl;
 
     // Section header table entry size
-    uint16_t shentsize = reader.get_file_header_section_header_size();
+    uint16_t shentsize = header.section_header_size;
     std::cout << "Section Header Table Entry Size: " << shentsize << std::endl;
 
     // Number of section entries
-    uint16_t shnum = reader.get_file_header_number_of_section_entries();
+    uint16_t shnum = header.number_of_section_entries;
     std::cout << "Number of Section Entries: " << shnum << std::endl;
 
     // Index of the section header table entry
-    uint16_t shstrndx = reader.get_file_header_index_of_section_header();
+    uint16_t shstrndx = header.index_of_section_header;
     std::cout << "Index of the Section Header Table Entry: " << shstrndx << std::endl;
 }
