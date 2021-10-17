@@ -93,10 +93,10 @@ namespace ELF
     // ISA Types
     enum class InstructionSetArchitectureType
     {
-        No_Specific                                    = 0x0U,
+        No_Specific                                    = 0x00U,
         AT_And_T_WE_32100                              = 0x01U,
         SPARC                                          = 0x02U,
-        X86                                            = 0x03,
+        X86                                            = 0x03U,
         M68k                                           = 0x04U,
         M88k                                           = 0x05U,
         Intel_MCU                                      = 0x06U,
@@ -113,8 +113,8 @@ namespace ELF
         S390                                           = 0x16U,
         IBM_SPU_SPC                                    = 0x17U,
         // 0x18 - 0x23 reserved
-        NEC_V800                                       = 0x024U,
-        Fujitsu_FR20                                   = 0x025U,
+        NEC_V800                                       = 0x24U,
+        Fujitsu_FR20                                   = 0x25U,
         TRW_RH32                                       = 0x26U,
         Motorola_RCE                                   = 0x27U,
         ARM                                            = 0x28U,
@@ -140,12 +140,31 @@ namespace ELF
         STMicroelectronics_ST100_Processor             = 0x3CU,
         Advanced_Logic_TinyJ_Embedded_Processor_Family = 0x3DU,
         AMD_X86_64                                     = 0x3EU,
-        TMS320C6000_Family                             = 0x8C,
+        TMS320C6000_Family                             = 0x8CU,
         MCST_Elbrus_e2k                                = 0xAFU,
         ARM_64bit                                      = 0xB7U,
         RISC_V                                         = 0xF3U,
         Berkeley_Packet_Filter                         = 0xF7U,
         WDC_65C816                                     = 0x101U
+    };
+
+    // ------------------------------------------------------------------------------------------------
+
+    // Identifies the type of the segment
+    enum class SegmentType
+    {
+        NONE    = 0x00000000U,
+        LOAD    = 0x00000001U,
+        DYNAMIC = 0x00000002U,
+        INTERP  = 0x00000003U,
+        NOTE    = 0x00000004U,
+        SHLIB   = 0x00000005U,
+        PHDR    = 0x00000006U,
+        TLS     = 0x00000007U,
+        LOOS    = 0x60000000U,
+        HIOS    = 0x6FFFFFFFU,
+        LOPROC  = 0x70000000U,
+        HIPROC  = 0x7FFFFFFFU
     };
 
     // ------------------------------------------------------------------------------------------------
@@ -170,6 +189,18 @@ namespace ELF
         uint16_t index_of_section_header;
     };
 
+    struct ProgramHeaderInfo
+    {
+        SegmentType type;
+        uint32_t flags; // 0x1 -> Execute, 0x2 -> Write, 0x4 -> Read.
+        uint64_t offset;
+        uint64_t virtual_address;
+        uint64_t physical_address;
+        uint64_t file_size;
+        uint64_t memory_size;
+        uint64_t alignment;
+    };
+
     class Reader
     {
     public:
@@ -177,6 +208,7 @@ namespace ELF
         ~Reader();
 
         const FileHeaderInfo get_file_header() const;
+        const std::vector<ProgramHeaderInfo> get_program_headers() const;
 
     private:
         void read_file_header(const std::vector<uint8_t>& buffer);

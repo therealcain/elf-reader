@@ -20,7 +20,8 @@ template<typename T32, typename T64>
 using BitsBasedType = 
     typename std::conditional<SysBits == 32, T32, T64>::type;
 
-using ZeroAllocType = char[0]; // or any other type. sizeof(ZeroAllocType) = 0.
+class EmptyClass{};
+using ZeroAllocType = EmptyClass[0]; // sizeof(ZeroAllocType) = 0.
 
 // ------------------------------------------------------------------------------------------------
 
@@ -181,5 +182,33 @@ namespace ELF
         info.index_of_section_header = file_header->shstrndx;
 
         return info;
+    }
+
+    const std::vector<ProgramHeaderInfo>
+    Reader::get_program_headers() 
+        const
+    {
+        std::vector<ProgramHeaderInfo> headers;
+
+        for(auto& p_header : program_headers)
+        {
+            ProgramHeaderInfo info;
+            info.type             = static_cast<SegmentType>(p_header->type);
+            info.offset           = p_header->offset;
+            info.virtual_address  = p_header->vaddr;
+            info.physical_address = p_header->paddr;
+            info.file_size        = p_header->filesz;
+            info.memory_size      = p_header->memsz;
+            info.alignment        = p_header->align;
+
+            if(sizeof(p_header->flags32) != 0)
+                info.flags = *reinterpret_cast<uint32_t*>(&p_header->flags32);
+            else
+                info.flags = *reinterpret_cast<uint32_t*>(&p_header->flags64);
+
+            headers.push_back(info);
+        }
+
+        return headers;
     }
 }

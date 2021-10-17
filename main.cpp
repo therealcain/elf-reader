@@ -6,16 +6,14 @@ int main()
     ELF::Reader reader("test");
     auto header = reader.get_file_header();
 
-    std::cout << "ALL VALUES ARE IN HEX" << std::endl;
-    
     std::cout << std::hex;
 
     // ELF magic header.
     auto magic = header.magic;
-    std::cout << "Magic: " << 
-        static_cast<int>(magic[0]) << " " << 
-        static_cast<int>(magic[1]) << " " << 
-        static_cast<int>(magic[2]) << " " << 
+    std::cout << "Magic: " << " 0x" <<
+        static_cast<int>(magic[0]) << " 0x" << 
+        static_cast<int>(magic[1]) << " 0x" << 
+        static_cast<int>(magic[2]) << " 0x" << 
         static_cast<int>(magic[3]) << std::endl;
 
 
@@ -351,23 +349,23 @@ int main()
 
     // Entry Point
     uint64_t entry = header.entry_point;
-    std::cout << "Entry Point: " << entry << std::endl;
+    std::cout << "Entry Point: 0x" << entry << std::endl;
 
     // Start of program header
     uint64_t phoff = header.start_of_program_header_table;
-    std::cout << "Start of Program Header: " << phoff << std::endl;
+    std::cout << "Start of Program Header: " << std::dec << phoff << std::endl;
 
     // Start of section header
     uint64_t shoff = header.start_of_section_header_table;
-    std::cout << "Start of Section Header: " << shoff << std::endl;
+    std::cout << "Start of Section Header: " << std::dec << shoff << std::endl;
 
     // Flags
     uint32_t flags = header.flags;
-    std::cout << "Flags: " << flags << std::endl;
+    std::cout << "Flags: 0x" << std::hex << flags << std::endl;
 
     // Header Size
     uint16_t ehsize = header.size;
-    std::cout << "Header Size: " << ehsize << std::endl;
+    std::cout << "Header Size: " << std::dec << ehsize << std::endl;
 
     // Program Header Size
     uint16_t phentsize = header.program_header_size;
@@ -388,4 +386,77 @@ int main()
     // Index of the section header table entry
     uint16_t shstrndx = header.index_of_section_header;
     std::cout << "Index of the Section Header Table Entry: " << shstrndx << std::endl;
+
+    auto headers = reader.get_program_headers();
+    for (size_t i = 0; i < headers.size(); i++)
+    {
+        auto &header = headers[i];
+
+        std::cout << std::endl;
+
+        std::cout << "Header Number: " << std::dec << i << std::endl;
+        
+        std::cout << "Type: ";
+        switch(header.type)
+        {
+        case ELF::SegmentType::LOAD:
+            std::cout << "LOAD";
+            break;
+
+        case ELF::SegmentType::DYNAMIC:
+            std::cout << "DYNAMIC";
+            break;
+
+        case ELF::SegmentType::INTERP:
+            std::cout << "INTERP";
+            break;
+
+        case ELF::SegmentType::SHLIB:
+            std::cout << "SHLIB";
+            break;
+
+        case ELF::SegmentType::NOTE:
+            std::cout << "NOTE";
+            break;
+
+        case ELF::SegmentType::PHDR:
+            std::cout << "PHDR";
+            break;
+
+        case ELF::SegmentType::TLS:
+            std::cout << "TLS";
+            break;
+
+        case ELF::SegmentType::LOOS:
+            std::cout << "LOOS";
+            break;
+
+        case ELF::SegmentType::HIOS:
+            std::cout << "HIOS";
+            break;
+
+        case ELF::SegmentType::LOPROC:
+            std::cout << "LOPROC";
+            break;
+
+        case ELF::SegmentType::HIPROC:
+            std::cout << "HIPROC";
+            break;
+
+        case ELF::SegmentType::NONE:
+        default:
+            std::cout << "NULL";
+            break;
+        }
+        std::cout << std::endl;
+
+        std::cout << std::hex;
+        std::cout << "Flags: 0x" << header.flags << std::endl;
+        std::cout << "Offset: 0x" << header.offset << std::endl;
+        std::cout << "Virtual Address: 0x" << header.virtual_address << std::endl;
+        std::cout << "Physical Address: 0x" << header.physical_address << std::endl;
+        std::cout << "File Size: 0x" << header.file_size << std::endl;
+        std::cout << "Memory Size: 0x" << header.memory_size << std::endl;
+        std::cout << "Alignment: 0x" << header.alignment << std::endl;
+    }
 }
