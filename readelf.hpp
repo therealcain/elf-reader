@@ -30,27 +30,39 @@
 #include <array>
 #include <memory>
 #include <vector>
+#include <type_traits>
+#include <climits>
+#include <cstdint>
+
+// ------------------------------------------------------------------------------------------------
 
 namespace ELF
 {
     namespace details {
-        struct FileHeader;
-        struct ProgramHeader;
-        struct SectionHeader;
+        static constexpr size_t SysBits = (CHAR_BIT * sizeof(void*));
+
+        template<typename T32, typename T64>
+        using BitsBasedType = 
+            typename std::conditional<SysBits == 32, T32, T64>::type;
+
+        class EmptyClass {};
+        using ZeroAllocType = EmptyClass[0]; // sizeof(ZeroAllocType) = 0.
     }
 
     // ------------------------------------------------------------------------------------------------
 
     enum class Endianness
+        : uint8_t
     {
-        Little,
-        Big
+        Little = 1,
+        Big    = 2
     };
 
     // ------------------------------------------------------------------------------------------------
 
     // Identifies the target operating system ABI.
     enum class ABIType
+        : uint8_t
     {
         SystemV                      = 0x00U,
         HP_UX                        = 0x01U,
@@ -76,6 +88,7 @@ namespace ELF
 
     // Identifies object file type.
     enum class ObjectFileType
+        : uint16_t
     {
         NONE   = 0x00U,
         REL    = 0x01U,
@@ -92,6 +105,7 @@ namespace ELF
 
     // ISA Types
     enum class InstructionSetArchitectureType
+        : uint16_t
     {
         No_Specific                                    = 0x00U,
         AT_And_T_WE_32100                              = 0x01U,
@@ -152,6 +166,7 @@ namespace ELF
 
     // Identifies the type of the segment
     enum class SegmentType
+        : uint32_t
     {
         NONE    = 0x00000000U,
         LOAD    = 0x00000001U,
@@ -169,37 +184,104 @@ namespace ELF
 
     // ------------------------------------------------------------------------------------------------
 
-    struct FileHeaderInfo
+    // Identifies the type of the section header.
+    enum class SectionType
+        : uint32_t
     {
-        std::array<uint8_t, 4> magic;
-        uint32_t bits;
-        Endianness endian;
-        ABIType abi;
-        ObjectFileType object_file_type;
-        InstructionSetArchitectureType instruction_set_architecture_type;
-        uint64_t entry_point;
-        uint64_t start_of_program_header_table;
-        uint64_t start_of_section_header_table;
-        uint32_t flags;
-        uint16_t size;
-        uint16_t program_header_size;
-        uint16_t number_of_program_entries;
-        uint16_t section_header_size;
-        uint16_t number_of_section_entries;
-        uint16_t index_of_section_header;
+        NONE          = 0x00U,
+        PROGBITS      = 0x01U,
+        SYMTAB        = 0x02U,
+        STRTAB        = 0x03U,
+        RELA          = 0x04U,
+        HASH          = 0x05U,
+        DYNAMIC       = 0x06U,
+        NOTE          = 0x07U,
+        NOBITS        = 0x08U,
+        REL           = 0x09U,
+        SHLIB         = 0x0AU,
+        DYNSYM        = 0x0BU,
+        INIT_ARRAY    = 0x0EU,
+        FINI_ARRAY    = 0x0FU,
+        PREINIT_ARRAY = 0x10U,
+        GROUP         = 0x11U,
+        SYMTAB_SHNDX  = 0x12U,
+        NUM           = 0x13U
     };
 
-    struct ProgramHeaderInfo
+    // 	Identifies the attributes of the section.
+    enum class SectionAttribute
+        : details::BitsBasedType<uint32_t, uint64_t>
     {
-        SegmentType type;
-        uint32_t flags; // 0x1 -> Execute, 0x2 -> Write, 0x4 -> Read.
-        uint64_t offset;
-        uint64_t virtual_address;
-        uint64_t physical_address;
-        uint64_t file_size;
-        uint64_t memory_size;
-        uint64_t alignment;
+        WRITE            = 0x1U,
+        ALLOC            = 0x2U,
+        EXECINSTR        = 0x4U,
+        MERGE            = 0x10U,
+        STRINGS          = 0x20U,
+        INFO_LINK        = 0x40U,
+        LINK_ORDER       = 0x80U,
+        OS_NONCONFORMING = 0x100U,
+        GROUP            = 0x200U,
+        TLS              = 0x400U,
+        MASKOS           = 0x0FF00000U,
+        MASKPROC         = 0xF0000000U,
+        ORDERED          = 0x4000000U,
+        EXCLUDE          = 0x8000000U
     };
+
+    // ------------------------------------------------------------------------------------------------
+
+    struct FileHeader
+    {          
+        uint8_t                                    magic[4];          
+        uint8_t                                    bits; // class
+        Endianness                                 endian;
+        uint8_t                                    version1;
+        ABIType                                    osabi;
+        uint8_t                                    abiver;
+        uint8_t                                    unused[7];
+        ObjectFileType                             type;
+        InstructionSetArchitectureType             machine;
+        uint32_t                                   version2;
+        details::BitsBasedType<uint32_t, uint64_t> entry;
+        details::BitsBasedType<uint32_t, uint64_t> phoff;
+        details::BitsBasedType<uint32_t, uint64_t> shoff;
+        uint32_t                                   flags;
+        uint16_t                                   ehsize;
+        uint16_t                                   phentsize;
+        uint16_t                                   phnum;
+        uint16_t                                   shentsize;
+        uint16_t                                   shnum;
+        uint16_t                                   shstrndx;
+    };
+
+    struct ProgramHeader
+    {
+        SegmentType                                              type;
+        details::BitsBasedType<details::ZeroAllocType, uint32_t> flags64; // flags for 64bit
+        details::BitsBasedType<uint32_t, uint64_t>               offset;
+        details::BitsBasedType<uint32_t, uint64_t>               vaddr;
+        details::BitsBasedType<uint32_t, uint64_t>               paddr;
+        details::BitsBasedType<uint32_t, uint64_t>               filesz;
+        details::BitsBasedType<uint32_t, uint64_t>               memsz;
+        details::BitsBasedType<uint32_t, details::ZeroAllocType> flags32; // flags for 32bit
+        details::BitsBasedType<uint32_t, uint64_t>               align;
+    };
+
+    struct SectionHeader
+    {
+        uint32_t                                   name;
+        SectionType                                type;
+        SectionAttribute                           flags;
+        details::BitsBasedType<uint32_t, uint64_t> addr;
+        details::BitsBasedType<uint32_t, uint64_t> offset;
+        details::BitsBasedType<uint32_t, uint64_t> size;
+        uint32_t                                   link;
+        uint32_t                                   info;
+        details::BitsBasedType<uint32_t, uint64_t> addralign;
+        details::BitsBasedType<uint32_t, uint64_t> entsize;
+    };
+
+    // ------------------------------------------------------------------------------------------------
 
     class Reader
     {
@@ -207,19 +289,19 @@ namespace ELF
         Reader(const std::string& filename);
         ~Reader();
 
-        const FileHeaderInfo get_file_header() const;
-        const std::vector<ProgramHeaderInfo> get_program_headers() const;
+        inline const FileHeader& get_file_header() const { return file_header; }
+        inline const std::vector<ProgramHeader> &get_program_headers() const { return program_headers; }
+        inline const std::vector<SectionHeader>& get_section_headers() const { return section_headers; }
 
     private:
         void read_file_header(const std::vector<uint8_t>& buffer);
         void read_program_headers(const std::vector<uint8_t>& buffer);
+        void read_section_headers(const std::vector<uint8_t>& buffer);
 
     private:
-        using PtrFileHeader = std::unique_ptr<details::FileHeader>;
-        PtrFileHeader file_header;
-
-        using PtrProgramHeader = std::unique_ptr<details::ProgramHeader>;
-        std::vector<PtrProgramHeader> program_headers;
+        FileHeader file_header;
+        std::vector<ProgramHeader> program_headers;
+        std::vector<SectionHeader> section_headers;
     };
 }
 

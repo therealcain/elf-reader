@@ -26,7 +26,7 @@ int main()
     std::cout << "Endianness: " << (endian == ELF::Endianness::Little ? "Little" : "Big") << std::endl;
 
     // OS ABI
-    auto abi = header.abi;
+    auto abi = header.osabi;
     std::cout << "ABI: ";
 
     switch(abi) {
@@ -106,7 +106,7 @@ int main()
     std::cout << std::endl;
 
     // Object File Type
-    auto obj_type = header.object_file_type;
+    auto obj_type = header.type;
     std::cout << "Object File Type: ";
 
     switch (obj_type)
@@ -150,7 +150,7 @@ int main()
     std::cout << std::endl;
 
     // ISA
-    auto isa = header.instruction_set_architecture_type;
+    auto isa = header.machine;
     std::cout << "Instruction Set: ";
     switch(isa)
     {
@@ -348,15 +348,15 @@ int main()
     std::cout << std::endl;
 
     // Entry Point
-    uint64_t entry = header.entry_point;
+    uint64_t entry = header.entry;
     std::cout << "Entry Point: 0x" << entry << std::endl;
 
     // Start of program header
-    uint64_t phoff = header.start_of_program_header_table;
+    uint64_t phoff = header.phoff;
     std::cout << "Start of Program Header: " << std::dec << phoff << std::endl;
 
     // Start of section header
-    uint64_t shoff = header.start_of_section_header_table;
+    uint64_t shoff = header.shoff;
     std::cout << "Start of Section Header: " << std::dec << shoff << std::endl;
 
     // Flags
@@ -364,37 +364,37 @@ int main()
     std::cout << "Flags: 0x" << std::hex << flags << std::endl;
 
     // Header Size
-    uint16_t ehsize = header.size;
+    uint16_t ehsize = header.ehsize;
     std::cout << "Header Size: " << std::dec << ehsize << std::endl;
 
     // Program Header Size
-    uint16_t phentsize = header.program_header_size;
+    uint16_t phentsize = header.phentsize;
     std::cout << "Program Header Table Entry Size: " << phentsize << std::endl;
 
     // Number of program entries
-    uint16_t phnum = header.number_of_program_entries;
+    uint16_t phnum = header.phnum;
     std::cout << "Number of Program Entries: " << phnum << std::endl;
 
     // Section header table entry size
-    uint16_t shentsize = header.section_header_size;
+    uint16_t shentsize = header.shentsize;
     std::cout << "Section Header Table Entry Size: " << shentsize << std::endl;
 
     // Number of section entries
-    uint16_t shnum = header.number_of_section_entries;
+    uint16_t shnum = header.shnum;
     std::cout << "Number of Section Entries: " << shnum << std::endl;
 
     // Index of the section header table entry
-    uint16_t shstrndx = header.index_of_section_header;
+    uint16_t shstrndx = header.shstrndx;
     std::cout << "Index of the Section Header Table Entry: " << shstrndx << std::endl;
 
-    auto headers = reader.get_program_headers();
-    for (size_t i = 0; i < headers.size(); i++)
+    auto program_headers = reader.get_program_headers();
+    for (size_t i = 0; i < program_headers.size(); i++)
     {
-        auto &header = headers[i];
+        auto& header = program_headers[i];
 
         std::cout << std::endl;
 
-        std::cout << "Header Number: " << std::dec << i << std::endl;
+        std::cout << "Program Header Number: " << std::dec << i << std::endl;
         
         std::cout << "Type: ";
         switch(header.type)
@@ -451,12 +451,111 @@ int main()
         std::cout << std::endl;
 
         std::cout << std::hex;
-        std::cout << "Flags: 0x" << header.flags << std::endl;
         std::cout << "Offset: 0x" << header.offset << std::endl;
-        std::cout << "Virtual Address: 0x" << header.virtual_address << std::endl;
-        std::cout << "Physical Address: 0x" << header.physical_address << std::endl;
-        std::cout << "File Size: 0x" << header.file_size << std::endl;
-        std::cout << "Memory Size: 0x" << header.memory_size << std::endl;
-        std::cout << "Alignment: 0x" << header.alignment << std::endl;
+        std::cout << "Virtual Address: 0x" << header.vaddr << std::endl;
+        std::cout << "Physical Address: 0x" << header.paddr << std::endl;
+        std::cout << "File Size: 0x" << header.filesz << std::endl;
+        std::cout << "Memory Size: 0x" << header.memsz << std::endl;
+        std::cout << "Alignment: 0x" << header.align << std::endl;
+    }
+
+    auto section_headers = reader.get_section_headers();
+    for (size_t i = 0; i < section_headers.size(); i++)
+    {
+        auto& header = section_headers[i];
+
+        std::cout << std::endl;
+
+        std::cout << "Section Header Number: " << std::dec << i << std::endl;
+
+        std::cout << "Name Position: 0x" << std::hex << header.name << std::endl;
+
+        std::cout << "Type: ";
+        switch(header.type)
+        {
+        case ELF::SectionType::PROGBITS:
+            std::cout << "PROGBITS";
+            break;
+
+        case ELF::SectionType::SYMTAB:
+            std::cout << "SYMTAB";
+            break;
+
+        case ELF::SectionType::STRTAB:
+            std::cout << "STRTAB";
+            break;
+
+        case ELF::SectionType::RELA:
+            std::cout << "RELA";
+            break;
+
+        case ELF::SectionType::HASH:
+            std::cout << "HASH";
+            break;
+
+        case ELF::SectionType::DYNAMIC:
+            std::cout << "DYNAMIC";
+            break;
+
+        case ELF::SectionType::NOTE:
+            std::cout << "NOTE";
+            break;
+
+        case ELF::SectionType::NOBITS:
+            std::cout << "NOBITS";
+            break;
+
+        case ELF::SectionType::REL:
+            std::cout << "REL";
+            break;
+
+        case ELF::SectionType::SHLIB:
+            std::cout << "SHLIB";
+            break;
+
+        case ELF::SectionType::DYNSYM:
+            std::cout << "DYNSYM";
+            break;
+
+        case ELF::SectionType::INIT_ARRAY:
+            std::cout << "INIT_ARRAY";
+            break;
+
+        case ELF::SectionType::FINI_ARRAY:
+            std::cout << "FINI_ARRAY";
+            break;
+
+        case ELF::SectionType::PREINIT_ARRAY:
+            std::cout << "PREINIT_ARRAY";
+            break;
+
+        case ELF::SectionType::GROUP:
+            std::cout << "GROUP";
+            break;
+
+        case ELF::SectionType::SYMTAB_SHNDX:
+            std::cout << "SYMTAB_SHNDX";
+            break;
+
+        case ELF::SectionType::NUM:
+            std::cout << "NUM";
+            break;
+
+        case ELF::SectionType::NONE:
+        default:
+            std::cout << "NULL";
+            break;
+        }
+        std::cout << std::endl;
+
+        // std::cout << "Flags";
+
+        std::cout << "Virtual Address: 0x" << std::hex << header.addr << std::endl;
+        std::cout << "Offset: 0x" << header.offset << std::endl;
+        std::cout << "Size: 0x" << header.size << std::endl;
+        std::cout << "Link: 0x" << header.link << std::endl;
+        std::cout << "Info: 0x" << header.info << std::endl;
+        std::cout << "Address Alignment: 0x" << header.addralign << std::endl;
+        std::cout << "Entry Size: 0x" << header.entsize << std::endl;
     }
 }
