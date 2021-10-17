@@ -290,20 +290,21 @@ namespace ELF
         ~Reader();
 
         inline const FileHeader& get_file_header() const { return file_header; }
-        inline const std::vector<ProgramHeader> &get_program_headers() const { return program_headers; }
+        inline const std::vector<ProgramHeader>& get_program_headers() const { return program_headers; }
         inline const std::vector<SectionHeader>& get_section_headers() const { return section_headers; }
+    
+    private:
+        void read_file_header();
+        void read_program_headers();
+        void read_section_headers();
 
     private:
-        void read_file_header(const std::vector<uint8_t>& buffer);
-        void read_program_headers(const std::vector<uint8_t>& buffer);
-        void read_section_headers(const std::vector<uint8_t>& buffer);
+        std::vector<uint8_t> data;
 
-    private:
         FileHeader file_header;
         std::vector<ProgramHeader> program_headers;
         std::vector<SectionHeader> section_headers;
     };
 }
-
 
 #endif // READELF_HPP

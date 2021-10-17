@@ -26,28 +26,28 @@ namespace ELF
     // ------------------------------------------------------------------------------------------------
 
     void 
-    Reader::read_file_header(const std::vector<uint8_t>& buffer)
+    Reader::read_file_header()
     {
-        if(buffer.size() < sizeof(FileHeader))
+        if(data.size() < sizeof(FileHeader))
             throw std::runtime_error("File header does not have an expected size.");
 
-        std::memcpy(&file_header, buffer.data(), sizeof(FileHeader));
+        std::memcpy(&file_header, data.data(), sizeof(FileHeader));
 
         if(!validate_elf_magic(file_header.magic))
             throw std::runtime_error("File is not an ELF file.");
     }
 
     void
-    Reader::read_program_headers(const std::vector<uint8_t>& buffer)
+    Reader::read_program_headers()
     {
         auto phnum     = file_header.phnum;
         auto phoff     = file_header.phoff;
         auto phentsize = file_header.phentsize;
 
-        if(phoff + (phnum * sizeof(ProgramHeader)) > buffer.size())
+        if(phoff + (phnum * sizeof(ProgramHeader)) > data.size())
             throw std::runtime_error("Program headers does not have an expected size.");
 
-        const uint8_t* p_header = buffer.data() + phoff;
+        const uint8_t* p_header = data.data() + phoff;
 
         for (size_t i = 0; i < phnum; i++)
         {
@@ -61,15 +61,15 @@ namespace ELF
     }
 
     void 
-    Reader::read_section_headers(const std::vector<uint8_t>& buffer)
+    Reader::read_section_headers()
     {
         auto shnum     = file_header.shnum;
         auto shoff     = file_header.shoff;
         auto shentsize = file_header.shentsize;
 
-        const uint8_t* p_header = buffer.data() + shoff;
+        const uint8_t* p_header = data.data() + shoff;
 
-        if(shoff + (shnum * sizeof(SectionHeader)) > buffer.size())
+        if(shoff + (shnum * sizeof(SectionHeader)) > data.size())
             throw std::runtime_error("Section headers does not have an expected size.");
 
         for (size_t i = 0; i < shnum; i++)
@@ -83,18 +83,23 @@ namespace ELF
         }
     }
 
+    // ------------------------------------------------------------------------------------------------
+
     Reader::Reader(const std::string& filename)
     {
         std::ifstream ifs(filename, std::ios::binary | std::ios::in);
 
         if(ifs.is_open())
         {
-            std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(ifs),
-                                        std::istreambuf_iterator<char>{});
+            std::copy(std::istreambuf_iterator<char>(ifs), 
+                      std::istreambuf_iterator<char>(), 
+                      std::back_inserter(data));
 
-            read_file_header(buffer);
-            read_program_headers(buffer);
-            read_section_headers(buffer);
+            ifs.close();
+
+            read_file_header();
+            read_program_headers();
+            read_section_headers();
         }
         else
             throw std::runtime_error("File couldn't be opened.");
