@@ -367,4 +367,24 @@ int main()
     // Header Size
     uint16_t ehsize = reader.get_file_header_size();
     std::cout << "Header Size: " << ehsize << std::endl;
+
+    // Program Header Size
+    uint16_t phentsize = reader.get_file_header_program_header_size();
+    std::cout << "Program Header Table Entry Size: " << phentsize << std::endl;
+
+    // Number of program entries
+    uint16_t phnum = reader.get_file_header_number_of_program_entries();
+    std::cout << "Number of Program Entries: " << phnum << std::endl;
+
+    // Section header table entry size
+    uint16_t shentsize = reader.get_file_header_section_header_size();
+    std::cout << "Section Header Table Entry Size: " << shentsize << std::endl;
+
+    // Number of section entries
+    uint16_t shnum = reader.get_file_header_number_of_section_entries();
+    std::cout << "Number of Section Entries: " << shnum << std::endl;
+
+    // Index of the section header table entry
+    uint16_t shstrndx = reader.get_file_header_index_of_section_header();
+    std::cout << "Index of the Section Header Table Entry: " << shstrndx << std::endl;
 }

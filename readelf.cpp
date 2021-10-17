@@ -22,8 +22,6 @@ template<typename T32, typename T64>
 using BitsBasedType = 
     typename std::conditional<SysBits == 32, T32, T64>::type;
 
-// using ZeroAllocType = char[0];
-
 // ------------------------------------------------------------------------------------------------
 
 namespace ELF
@@ -53,7 +51,8 @@ namespace ELF
             uint16_t shstrndx;
         };
     }
-        
+
+    // ------------------------------------------------------------------------------------------------
 
     static inline
     bool 
@@ -190,5 +189,40 @@ namespace ELF
         const
     {
         return file_header->ehsize;
+    }
+
+    uint16_t
+    Reader::get_file_header_program_header_size() 
+        const
+    {
+        return file_header->phentsize;
+    }
+
+    uint16_t 
+    Reader::get_file_header_number_of_program_entries() 
+        const
+    {
+        return file_header->phnum;
+    }
+
+    uint16_t 
+    Reader::get_file_header_section_header_size() 
+        const
+    {
+        return file_header->shentsize;
+    }
+
+    uint16_t 
+    Reader::get_file_header_number_of_section_entries() 
+        const
+    {
+        return file_header->shnum;
+    }
+
+    uint16_t 
+    Reader::get_file_header_index_of_section_header() 
+        const
+    {
+        return file_header->shstrndx;
     }
 }
