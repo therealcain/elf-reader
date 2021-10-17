@@ -363,4 +363,8 @@ int main()
     // Flags
     uint32_t flags = reader.get_file_header_flags();
     std::cout << "Flags: " << flags << std::endl;
+
+    // Header Size
+    uint16_t ehsize = reader.get_file_header_size();
+    std::cout << "Header Size: " << ehsize << std::endl;
 }

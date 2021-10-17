@@ -164,6 +164,8 @@ namespace ELF
         uint64_t get_file_header_start_of_program_header_table() const;
         uint64_t get_file_header_start_of_section_header_table() const;
         uint32_t get_file_header_flags() const;
+        uint16_t get_file_header_size() const;
+
 
     private:
         std::unique_ptr<details::FileHeader> file_header;

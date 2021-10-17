@@ -11,6 +11,10 @@
 #include <iostream>
 #include <type_traits>
 #include <climits>
+#include <iomanip>
+// #include <elf.h>
+
+// ------------------------------------------------------------------------------------------------
 
 static constexpr size_t SysBits = (CHAR_BIT * sizeof(void*));
 
@@ -27,7 +31,7 @@ namespace ELF
     namespace details {
         struct FileHeader
         {
-            uint8_t magic[4];
+            uint8_t magic[4];          
             uint8_t bits; // class
             uint8_t endian;
             uint8_t version1;
@@ -65,7 +69,7 @@ namespace ELF
 
     static
     void
-    read_file_header(std::unique_ptr<details::FileHeader>& header, const std::vector<char>& buffer)
+    read_file_header(std::unique_ptr<details::FileHeader>& header, const std::vector<uint8_t>& buffer)
     {
         if(buffer.size() < sizeof(details::FileHeader))
             throw std::runtime_error("File header does not have an expected size.");
@@ -79,12 +83,12 @@ namespace ELF
     Reader::Reader(const std::string& filename)
         : file_header(std::make_unique<details::FileHeader>())
     {
-        std::ifstream ifs(filename, std::ios::binary);
+        std::ifstream ifs(filename, std::ios::binary | std::ios::in);
 
         if(ifs.is_open())
         {
-            std::vector<char> buffer(std::istream_iterator<char>{ifs},
-                                     std::istream_iterator<char>{});
+            std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(ifs),
+                                        std::istreambuf_iterator<char>{});
 
             read_file_header(file_header, buffer);
         }
@@ -181,5 +185,10 @@ namespace ELF
         return file_header->flags;
     }
 
-    
+    uint16_t
+    Reader::get_file_header_size() 
+        const
+    {
+        return file_header->ehsize;
+    }
 }
